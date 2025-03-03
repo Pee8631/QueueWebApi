@@ -104,6 +104,9 @@ namespace QueueWebApi.Repositories.queueRepository
                     }
                 }
 
+                queue.QueueNumber = queueNumber;
+                queue.updatedAt = DateTimeOffset.Now;
+
                 dataContext.Queue.Update(queue!);
                 await dataContext.SaveChangesAsync();
 

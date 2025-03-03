@@ -10,7 +10,7 @@ namespace QueueWebApi.Repositories.queueRepository
         private readonly DataContext dataContext;
         public queueRepository(DataContext _dataContext)
         {
-            dataContext = _dataContext;            
+            dataContext = _dataContext;
         }
         public async Task<Dto<int>> countQueue()
         {
@@ -22,7 +22,8 @@ namespace QueueWebApi.Repositories.queueRepository
                     Data = countQ,
                     IsStatusOk = true,
                 };
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 return new Dto<int>
                 {
@@ -42,7 +43,8 @@ namespace QueueWebApi.Repositories.queueRepository
                     Data = queue,
                     IsStatusOk = true,
                 };
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 return new Dto<Queue>
                 {
@@ -54,75 +56,88 @@ namespace QueueWebApi.Repositories.queueRepository
 
         public async Task<Dto<Queue>> createQueue(string queueNumber)
         {
-            try
+            using (var transaction = dataContext.Database.BeginTransaction())
             {
-                Queue queue = new Queue
+                try
                 {
-                    QueueNumber = queueNumber,
-                    createdAt = DateTimeOffset.Now,
-                    updatedAt = DateTimeOffset.Now
-                };
 
-                await dataContext.Queue.AddAsync(queue);
-                await dataContext.SaveChangesAsync();
+                    Queue queue = new Queue
+                    {
+                        QueueNumber = queueNumber,
+                        createdAt = DateTimeOffset.Now,
+                        updatedAt = DateTimeOffset.Now
+                    };
 
-                return new Dto<Queue>
+                    await dataContext.Queue.AddAsync(queue);
+                    await dataContext.SaveChangesAsync();
+                    transaction.Commit();
+
+                    return new Dto<Queue>
+                    {
+                        Data = queue,
+                        IsStatusOk = true,
+                    };
+                }
+                catch (Exception ex)
                 {
-                    Data = queue,
-                    IsStatusOk = true,
-                };
-            }
-            catch (Exception ex)
-            {
-                return new Dto<Queue>
-                {
-                    IsStatusOk = true,
-                    Message = ex.Message,
-                };
+                    transaction.Rollback();
+                    return new Dto<Queue>
+                    {
+                        IsStatusOk = true,
+                        Message = ex.Message,
+                    };
+
+                }
             }
         }
 
         public async Task<Dto<Queue>> updateQueue(string queueNumber)
         {
-            try
+            using (var transaction = dataContext.Database.BeginTransaction())
             {
-                var queue = await dataContext.Queue.FirstOrDefaultAsync();
-                if (queue == null)
+
+                try
                 {
-                   var queueDto = await createQueue(queueNumber);
-                    if (!queueDto.IsStatusOk)
+                    var queue = await dataContext.Queue.FirstOrDefaultAsync();
+                    if (queue == null)
                     {
-                        return new Dto<Queue>
+                        var queueDto = await createQueue(queueNumber);
+                        if (!queueDto.IsStatusOk)
                         {
-                            IsStatusOk = true,
-                            Message = queueDto.Message,
-                        };
+                            return new Dto<Queue>
+                            {
+                                IsStatusOk = true,
+                                Message = queueDto.Message,
+                            };
+                        }
+                        else
+                        {
+                            queue = queueDto.Data;
+                        }
                     }
-                    else
+
+                    queue.QueueNumber = queueNumber;
+                    queue.updatedAt = DateTimeOffset.Now;
+
+                    dataContext.Queue.Update(queue!);
+                    await dataContext.SaveChangesAsync();
+                    transaction.Commit();
+
+                    return new Dto<Queue>
                     {
-                        queue = queueDto.Data;
-                    }
+                        Data = queue,
+                        IsStatusOk = true,
+                    };
                 }
-
-                queue.QueueNumber = queueNumber;
-                queue.updatedAt = DateTimeOffset.Now;
-
-                dataContext.Queue.Update(queue!);
-                await dataContext.SaveChangesAsync();
-
-                return new Dto<Queue>
+                catch (Exception ex)
                 {
-                    Data = queue,
-                    IsStatusOk = true,
-                };
-            }
-            catch (Exception ex)
-            {
-                return new Dto<Queue>
-                {
-                    IsStatusOk = true,
-                    Message = ex.Message,
-                };
+                    transaction.Rollback();
+                    return new Dto<Queue>
+                    {
+                        IsStatusOk = true,
+                        Message = ex.Message,
+                    };
+                }
             }
         }
     }

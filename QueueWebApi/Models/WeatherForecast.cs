@@ -1,4 +1,4 @@
-namespace QueueWebApi
+namespace QueueWebApi.Models
 {
     public class WeatherForecast
     {

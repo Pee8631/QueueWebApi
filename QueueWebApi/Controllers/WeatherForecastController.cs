@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using QueueWebApi.Models;
 
 namespace QueueWebApi.Controllers
 {
